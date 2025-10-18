@@ -6,25 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mis recuerdos</title>
     <style>
+        /* ======== BASE ======== */
         body {
             font-family: Arial;
             background: radial-gradient(circle, rgba(253, 224, 236, 0.85) 0%, rgb(255, 255, 230) 100%);
-        }
-
-        .card {
-            background: #fff;
-            border-radius: 8px;
-            padding: 8px;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, .08)
+            margin: 0;
+            padding: 0;
         }
 
         img,
         video {
             width: 100%;
-            border-radius: 6px
+            border-radius: 6px;
         }
 
-        /* ===== NAVBAR CUSTOM ===== */
+        /* ======== NAVBAR ======== */
         .navbar-custom {
             width: min(1100px, 92%);
             margin: 20px auto;
@@ -35,23 +31,13 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
         }
 
-        .hero h1 {
-            font-size: clamp(28px, 7vw, 64px);
-        }
-
-        .hero p.lead {
-            font-size: clamp(15px, 3.8vw, 22px);
-        }
-
-
-
-
         .nav-inner {
             display: flex;
             justify-content: space-between;
             align-items: center;
             max-width: 1200px;
             margin: 0 auto;
+            flex-wrap: wrap;
         }
 
         .nav-left {
@@ -84,20 +70,6 @@
             margin: 0;
         }
 
-        .admin-btn {
-            background: #fff;
-            border-radius: 12px;
-            padding: 8px 16px;
-            color: #1e1e1e;
-            font-weight: 500;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-            transition: all 0.2s ease;
-        }
-
-        .admin-btn:hover {
-            background: #f5f5f5;
-        }
-
         @media (max-width: 560px) {
             .nav-inner {
                 justify-content: center;
@@ -105,8 +77,7 @@
             }
         }
 
-
-        /* ===== HERO ===== */
+        /* ======== HERO ======== */
         .hero {
             position: relative;
             max-width: 1000px;
@@ -115,7 +86,6 @@
             text-align: center;
         }
 
-        /* glow suave detrás del hero */
         .hero::before {
             content: "";
             position: absolute;
@@ -163,67 +133,46 @@
             line-height: 1.6;
         }
 
-        .hero .cta-row {
-            margin-top: 22px;
-            display: flex;
-            gap: 18px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .cta {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: #fff;
-            padding: 12px 18px;
-            border-radius: 14px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
-            color: #2b2b2b;
-            font-weight: 700;
-            border: 1px solid rgba(0, 0, 0, .05);
-            transition: transform .15s ease, background .15s ease;
-        }
-
-        .cta:hover {
-            transform: translateY(-2px);
-        }
-
-        /* iconos de los botones */
-        .icon {
-            width: 20px;
-            height: 20px;
-            display: inline-block;
-        }
-
-        .icon.photo {
-            color: #ff9100;
-        }
-
-        .icon.video {
-            color: #ff3d57;
-        }
-
-        /* Encabezado de la galería */
-        .section-title {
-            text-align: center;
-            color: #3a3a3a;
-            margin: 18px 0 8px;
-        }
-
-        /* ===== GALERÍA ===== */
+        /* ======== GALERÍA ======== */
         .gallery-section {
             max-width: 1100px;
             margin: 40px auto;
             padding: 0 20px;
         }
 
+        /* MOBILE-FIRST GRID */
         .grid {
             display: grid;
-            gap: 28px;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: 1fr;
+            /* móvil: 1 columna */
+            gap: 16px;
         }
 
+        /* TABLET */
+        @media (min-width: 480px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+        }
+
+        /* DESKTOP MEDIO */
+        @media (min-width: 900px) {
+            .grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+            }
+        }
+
+        /* DESKTOP GRANDE */
+        @media (min-width: 1200px) {
+            .grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 28px;
+            }
+        }
+
+        /* ======== TARJETAS ======== */
         .card {
             position: relative;
             overflow: hidden;
@@ -231,6 +180,7 @@
             background: #fff;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
         }
 
         .card:hover {
@@ -241,12 +191,13 @@
         .card img,
         .card video {
             width: 100%;
-            height: 100%;
+            height: auto;
             object-fit: cover;
             border-radius: 16px;
             display: block;
         }
 
+        /* ÍCONO DE MEDIO */
         .media-icon {
             position: absolute;
             top: 10px;
@@ -265,23 +216,7 @@
             height: 20px;
         }
 
-        /* tablet */
-        @media (max-width: 768px) {
-            .grid {
-                gap: 20px;
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* móvil */
-        @media (max-width: 480px) {
-            .grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
-            }
-        }
-
-        /* ===== LIGHTBOX ===== */
+        /* ======== LIGHTBOX ======== */
         .lightbox {
             position: fixed;
             inset: 0;
@@ -375,14 +310,6 @@
 
         body.modal-open {
             overflow: hidden;
-        }
-
-        .card {
-            cursor: pointer;
-        }
-
-        .nav-inner {
-            flex-wrap: wrap;
         }
     </style>
 </head>
