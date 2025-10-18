@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mis recuerdos</title>
     <style>
         body {
@@ -31,15 +32,30 @@
 
         /* ===== NAVBAR CUSTOM ===== */
         .navbar-custom {
-            width: 70%;
+            width: min(1100px, 92%);
             margin: 20px auto;
-            /* centrado horizontal */
             background: linear-gradient(90deg, #fffaf3, #fff7ef);
             padding: 15px 20px;
             text-align: center;
             border-radius: 16px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
         }
+
+        .hero h1 {
+            font-size: clamp(28px, 7vw, 64px);
+        }
+
+        .hero p.lead {
+            font-size: clamp(15px, 3.8vw, 22px);
+        }
+
+        @media (max-width: 480px) {
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+
 
 
         .nav-inner {
@@ -357,6 +373,10 @@
 
         .card {
             cursor: pointer;
+        }
+
+        .nav-inner {
+            flex-wrap: wrap;
         }
     </style>
 </head>

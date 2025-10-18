@@ -1,132 +1,95 @@
-// server.js (Node 22+ con node:sqlite nativo, sin dependencias nativas)
-const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const crypto = require('crypto');
-const fs = require('fs');
-const { DatabaseSync } = require('node:sqlite'); // 👈 módulo nativo
+// arriba de todo
+const cloudinary = require('cloudinary').v2;
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-const SECRET = process.env.SECRET || 'clave_super_secreta';
-const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASS || '1234';
+// …tus const PORT, SECRET, etc…
 
-// ==== Paths de datos (Render free: /tmp persiste mientras corre el contenedor)
-const DATA_DIR = process.env.DATA_DIR || '/tmp/data';
-const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-// ==== Multer
-const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, UPLOAD_DIR),
-  filename: (_, file, cb) => {
-    const unique = Date.now() + '-' + Math.floor(Math.random() * 9000 + 1000);
-    cb(null, unique + path.extname(file.originalname));
-  }
+// Cloudinary config (desde variables de entorno)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
-const upload = multer({ storage });
 
-// ==== DB con node:sqlite (sin npm install)
-// Archivo físico: /tmp/data/db.sqlite
-const dbPath = path.join(DATA_DIR, 'db.sqlite');
-const db = new DatabaseSync(dbPath); // abre al construir
+// ===== Multer en memoria (no escribir a disco) =====
+const storage = multer.memoryStorage();
+const upload  = multer({ storage });
+
+// ===== Migración de columnas para Cloudinary =====
+// (si ya creaste la tabla antes)
 db.exec(`
-  CREATE TABLE IF NOT EXISTS media (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    filename TEXT NOT NULL,
-    original_name TEXT,
-    type TEXT,
-    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    title TEXT,
-    description TEXT,
-    event_date TEXT
-  );
+  ALTER TABLE media ADD COLUMN cloud_url TEXT;
 `);
+db.exec(`
+  ALTER TABLE media ADD COLUMN cloud_id  TEXT;
+`);
+// Nota: si las columnas ya existen, estas sentencias pueden fallar una vez.
+// No pasa nada; si prefieres hacerlo sin errores, envuélvelo en try/catch.
 
-// ==== Static
-app.use('/uploads', express.static(UPLOAD_DIR));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
+// ===== /admin/upload: subir a Cloudinary =====
+app.post('/admin/upload', adminAuth, upload.single('media'), (req, res) => {
+  if (!req.file) return res.status(400).send('file required');
 
-// ==== Tokens HMAC simples
-function createToken(payloadObj, expiresInSeconds = 60 * 60 * 24 * 30) {
-  const payload = { ...payloadObj, exp: Math.floor(Date.now() / 1000) + expiresInSeconds };
-  const payloadStr = JSON.stringify(payload);
-  const signature = crypto.createHmac('sha256', SECRET).update(payloadStr).digest('base64url');
-  return Buffer.from(payloadStr).toString('base64url') + '.' + signature;
-}
-function verifyToken(token) {
-  try {
-    const [payloadB64, sig] = (token || '').split('.');
-    if (!payloadB64 || !sig) return null;
-    const payloadStr = Buffer.from(payloadB64, 'base64url').toString('utf8');
-    const expected = crypto.createHmac('sha256', SECRET).update(payloadStr).digest('base64url');
-    if (sig !== expected) return null;
-    const payload = JSON.parse(payloadStr);
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
-    return payload;
-  } catch {
-    return null;
-  }
-}
+  // Detecta tipo
+  const mime = req.file.mimetype || '';
+  const type = mime.startsWith('video') ? 'video' : 'image';
 
-// ==== Rutas
-app.get('/access/:token', (req, res) => {
-  const payload = verifyToken(req.params.token);
-  if (!payload) return res.status(403).send('Para ver los recuerdos debes de escanear el código.');
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  const title       = (req.body.title || '').trim();
+  const description = (req.body.description || '').trim();
+  const event_date  = (req.body.event_date || '').trim();
+
+  // Subir mediante stream para no escribir a disco
+  const opts = {
+    folder: process.env.CLOUDINARY_FOLDER || 'recuerdos',
+    resource_type: 'auto' // auto = imagen o video
+  };
+
+  const stream = cloudinary.uploader.upload_stream(opts, (err, result) => {
+    if (err) {
+      console.error('Cloudinary error:', err);
+      return res.status(500).json({ error: 'upload failed' });
+    }
+
+    // result.secure_url -> URL público
+    // result.public_id  -> id para borrar en el futuro si lo necesitas
+    const insert = db.prepare(`
+      INSERT INTO media (filename, original_name, type, title, description, event_date, cloud_url, cloud_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insert.run(
+      '',                        // filename vacío (ya no usamos archivos locales)
+      req.file.originalname || '',
+      type,
+      title,
+      description,
+      event_date,
+      result.secure_url,
+      result.public_id
+    );
+
+    console.log('📤 Subido a Cloudinary:', { type, url: result.secure_url, id: result.public_id });
+    res.json({ ok: true, url: result.secure_url });
+  });
+
+  // enviar el buffer a Cloudinary
+  stream.end(req.file.buffer);
 });
 
+// ===== /api/media: prioriza Cloudinary =====
 app.get('/api/media', (req, res) => {
   const token = req.query.token || req.headers['x-access-token'];
   const payload = verifyToken(token);
   if (!payload) return res.status(403).json({ error: 'token inválido' });
 
   const stmt = db.prepare(`
-    SELECT id, filename, original_name, type, uploaded_at, title, description, event_date
+    SELECT id, filename, original_name, type, uploaded_at, title, description, event_date, cloud_url
     FROM media
     ORDER BY uploaded_at DESC
   `);
-  const rows = stmt.all().map(r => ({ ...r, url: `/uploads/${r.filename}` }));
+  const rows = stmt.all().map(r => {
+    const url = r.cloud_url && r.cloud_url.startsWith('http')
+      ? r.cloud_url
+      : (r.filename ? `/uploads/${r.filename}` : '');
+    return { ...r, url };
+  });
   res.json(rows);
-});
-
-// Basic auth
-function adminAuth(req, res, next) {
-  const auth = req.headers.authorization || '';
-  if (!auth.startsWith('Basic ')) {
-    return res.status(401).set('WWW-Authenticate', 'Basic realm="Admin"').send('Auth required');
-  }
-  const [user, pass] = Buffer.from(auth.split(' ')[1], 'base64').toString().split(':');
-  if (user === ADMIN_USER && pass === ADMIN_PASS) return next();
-  return res.status(403).send('Forbidden');
-}
-
-app.post('/admin/upload', adminAuth, upload.single('media'), (req, res) => {
-  if (!req.file) return res.status(400).send('file required');
-
-  const type = req.file.mimetype.startsWith('video') ? 'video' : 'image';
-  const title = (req.body.title || '').trim();
-  const description = (req.body.description || '').trim();
-  const event_date = (req.body.event_date || '').trim();
-
-  const insert = db.prepare(`
-    INSERT INTO media (filename, original_name, type, title, description, event_date)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  insert.run(req.file.filename, req.file.originalname, type, title, description, event_date);
-
-  console.log('📤 Subido:', { title, event_date, type });
-  res.json({ ok: true, url: `/uploads/${req.file.filename}` });
-});
-
-app.get('/create-token', (req, res) => {
-  const token = createToken({ for: 'recuerdo' });
-  res.json({ token, url: `${req.protocol}://${req.get('host')}/access/${token}` });
-});
-
-app.listen(PORT, () => {
-  console.log('✅ DB en', dbPath);
-  console.log('🚀 Servidor escuchando en puerto', PORT);
 });
