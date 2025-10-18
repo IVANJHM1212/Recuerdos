@@ -11,12 +11,6 @@
             background: radial-gradient(circle, rgba(253, 224, 236, 0.85) 0%, rgb(255, 255, 230) 100%);
         }
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 12px
-        }
-
         .card {
             background: #fff;
             border-radius: 8px;
@@ -49,12 +43,6 @@
             font-size: clamp(15px, 3.8vw, 22px);
         }
 
-        @media (max-width: 480px) {
-            .grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
-            }
-        }
 
 
 
@@ -109,6 +97,14 @@
         .admin-btn:hover {
             background: #f5f5f5;
         }
+
+        @media (max-width: 560px) {
+            .nav-inner {
+                justify-content: center;
+                gap: 10px;
+            }
+        }
+
 
         /* ===== HERO ===== */
         .hero {
@@ -224,8 +220,8 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 28px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         }
 
         .card {
@@ -269,9 +265,19 @@
             height: 20px;
         }
 
+        /* tablet */
         @media (max-width: 768px) {
             .grid {
                 gap: 20px;
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* móvil */
+        @media (max-width: 480px) {
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
             }
         }
 
