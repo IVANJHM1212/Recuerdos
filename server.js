@@ -36,8 +36,8 @@ db.exec(`
 `);
 
 // Si vienes de una tabla vieja, intenta añadir columnas (ignora error si existen)
-try { db.exec(`ALTER TABLE media ADD COLUMN cloud_url TEXT;`); } catch {}
-try { db.exec(`ALTER TABLE media ADD COLUMN cloud_id  TEXT;`); } catch {}
+try { db.exec(`ALTER TABLE media ADD COLUMN cloud_url TEXT;`); } catch { }
+try { db.exec(`ALTER TABLE media ADD COLUMN cloud_id  TEXT;`); } catch { }
 
 // ===================== Express =====================
 const app = express();
@@ -49,13 +49,13 @@ const PORT = process.env.PORT || 10000;
 // ===================== Cloudinary =====================
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 // ===================== Multer (memoria) =====================
 const storage = multer.memoryStorage();
-const upload  = multer({ storage });
+const upload = multer({ storage });
 
 // ===================== Auth helpers =====================
 // Basic Auth para admin
@@ -81,14 +81,41 @@ function verifyToken(token) {
 }
 
 // ===================== Rutas de páginas =====================
-// Sirve index.html
+// ====== Rutas de páginas y estáticos (robustas) ======
+const CANDIDATE_STATIC_DIRS = [
+  path.join(__dirname),
+  path.join(__dirname, 'public'),
+  path.join(__dirname, 'static')
+];
+
+// monta estáticos para cada carpeta que exista
+for (const dir of CANDIDATE_STATIC_DIRS) {
+  if (fs.existsSync(dir)) {
+    app.use(express.static(dir));
+  }
+}
+
+// helper para resolver el primer archivo existente
+function resolvePage(filename) {
+  for (const dir of CANDIDATE_STATIC_DIRS) {
+    const p = path.join(dir, filename);
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+// Home
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const file = resolvePage('index.html');
+  if (!file) return res.status(404).send('index.html no encontrado (colócalo en /, /public o /static)');
+  res.sendFile(file);
 });
 
-// Sirve admin.html
+// Admin
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin.html'));
+  const file = resolvePage('admin.html');
+  if (!file) return res.status(404).send('admin.html no encontrado (colócalo en /, /public o /static)');
+  res.sendFile(file);
 });
 
 // ===================== API =====================
@@ -99,9 +126,9 @@ app.post('/admin/upload', adminAuth, upload.single('media'), (req, res) => {
   const mime = req.file.mimetype || '';
   const type = mime.startsWith('video') ? 'video' : 'image';
 
-  const title       = (req.body.title || '').trim();
+  const title = (req.body.title || '').trim();
   const description = (req.body.description || '').trim();
-  const event_date  = (req.body.event_date || '').trim();
+  const event_date = (req.body.event_date || '').trim();
 
   // Carpeta opcional
   const folder = process.env.CLOUDINARY_FOLDER || 'recuerdos';
