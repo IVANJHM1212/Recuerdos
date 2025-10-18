@@ -1,5 +1,7 @@
 // arriba de todo
 const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
+
 
 // …tus const PORT, SECRET, etc…
 
