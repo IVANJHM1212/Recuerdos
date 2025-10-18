@@ -1,142 +1,117 @@
 // server.js
-// ===================== Setup básico =====================
 require('dotenv').config();
 
-const path = require('path');
-const fs = require('fs');
-const express = require('express');
-const cloudinary = require('cloudinary').v2;
-const multer = require('multer');
+const path        = require('path');
+const fs          = require('fs');
+const express     = require('express');
+const multer      = require('multer');
+const cloudinary  = require('cloudinary').v2;
+const crypto      = require('crypto');
 
-// ===================== Base de datos (node:sqlite) =====================
-// Usamos la API experimental sin dependencias extra.
-// Si prefieres better-sqlite3, avisa y te paso la variante.
-const { DatabaseSync } = require('node:sqlite');
-
-const DATA_DIR = path.join(__dirname, 'data');
-fs.mkdirSync(DATA_DIR, { recursive: true });
-const DB_PATH = path.join(DATA_DIR, 'db.sqlite');
-const db = new DatabaseSync(DB_PATH);
-console.log('✅ DB en', DB_PATH);
-
-// Crea tabla (con columnas cloud_* ya incluidas para instalaciones nuevas)
-db.exec(`
-  CREATE TABLE IF NOT EXISTS media (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    filename TEXT,
-    original_name TEXT,
-    type TEXT,
-    uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    title TEXT,
-    description TEXT,
-    event_date TEXT,
-    cloud_url TEXT,
-    cloud_id  TEXT
-  );
-`);
-
-// Si vienes de una tabla vieja, intenta añadir columnas (ignora error si existen)
-try { db.exec(`ALTER TABLE media ADD COLUMN cloud_url TEXT;`); } catch { }
-try { db.exec(`ALTER TABLE media ADD COLUMN cloud_id  TEXT;`); } catch { }
-
-// ===================== Express =====================
-const app = express();
+// ==== Express base ====
+const app  = express();
 const PORT = process.env.PORT || 10000;
 
-// (opcional) sirve archivos estáticos si los tienes en carpeta /public
-// Si index.html y admin.html están en la raíz del repo, los servimos más abajo con sendFile.
+// ==== Archivos estáticos ====
+// sirve index.html y admin.html desde el directorio raíz del repo
+app.use(express.static(__dirname, { extensions: ['html'] }));
 
-// ===================== Cloudinary =====================
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+// ==== SQLite (better-sqlite3, síncrono y estable) ====
+// Si no la tienes en package.json, añade:  "better-sqlite3": "^9.6.0"
+const Database = require('better-sqlite3');
+const DATA_DIR = path.join(__dirname, 'data');
+fs.mkdirSync(DATA_DIR, { recursive: true });
+const DB_PATH  = path.join(DATA_DIR, 'db.sqlite');
+const db = new Database(DB_PATH);
+console.log(`✅ DB en ${DB_PATH}`);
 
-// ===================== Multer (memoria) =====================
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// crea tabla si no existe
+db.exec(`
+  CREATE TABLE IF NOT EXISTS media (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    filename      TEXT,
+    original_name TEXT,
+    type          TEXT CHECK(type IN ('image','video')) NOT NULL,
+    uploaded_at   TEXT DEFAULT (datetime('now')),
+    title         TEXT,
+    description   TEXT,
+    event_date    TEXT,
+    cloud_url     TEXT,
+    cloud_id      TEXT
+  )
+`);
 
-// ===================== Auth helpers =====================
-// Basic Auth para admin
+// ==== Migración segura (agrega columnas si faltan) ====
+try { db.exec(`ALTER TABLE media ADD COLUMN cloud_url TEXT;`); } catch {}
+try { db.exec(`ALTER TABLE media ADD COLUMN cloud_id  TEXT;`); } catch {}
+
+// ==== Auth admin básica ====
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'admin123';
 function adminAuth(req, res, next) {
-  const header = req.headers.authorization || '';
-  if (!header.startsWith('Basic ')) {
+  const hdr = req.headers.authorization || '';
+  if (!hdr.startsWith('Basic ')) {
     res.set('WWW-Authenticate', 'Basic realm="admin"');
     return res.status(401).send('auth required');
   }
-  const [user, pass] = Buffer.from(header.slice(6), 'base64').toString().split(':');
-  const AU = process.env.ADMIN_USER || 'admin';
-  const AP = process.env.ADMIN_PASS || 'admin';
-  if (user === AU && pass === AP) return next();
-  return res.status(403).send('forbidden');
+  const [user, pass] = Buffer.from(hdr.slice(6), 'base64').toString().split(':');
+  if (user === ADMIN_USER && pass === ADMIN_PASS) return next();
+  res.set('WWW-Authenticate', 'Basic realm="admin"');
+  return res.status(401).send('invalid credentials');
 }
 
-// Verificación de token para ver la galería
+// ==== Tokens de acceso (HMAC simple) ====
+const ACCESS_SECRET = process.env.ACCESS_SECRET || 'cambia-esto';
+function signToken(payload) {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sig  = crypto.createHmac('sha256', ACCESS_SECRET).update(body).digest('base64url');
+  return `${body}.${sig}`;
+}
 function verifyToken(token) {
-  const required = process.env.SECRET_TOKEN; // si existe, debe coincidir
-  if (required) return token === required ? { ok: true } : null;
-  // si no definiste SECRET_TOKEN, acepta tokens no vacíos (como en tu front)
-  return token && token.length >= 10 ? { ok: true } : null;
+  if (!token) return null;
+  const [body, sig] = token.split('.');
+  if (!body || !sig) return null;
+  const expSig = crypto.createHmac('sha256', ACCESS_SECRET).update(body).digest('base64url');
+  if (sig !== expSig) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString());
+    return payload;
+  } catch { return null; }
 }
 
-// ===================== Rutas de páginas =====================
-// ====== Rutas de páginas y estáticos (robustas) ======
-const CANDIDATE_STATIC_DIRS = [
-  path.join(__dirname),
-  path.join(__dirname, 'public'),
-  path.join(__dirname, 'static')
-];
-
-// monta estáticos para cada carpeta que exista
-for (const dir of CANDIDATE_STATIC_DIRS) {
-  if (fs.existsSync(dir)) {
-    app.use(express.static(dir));
-  }
-}
-
-// helper para resolver el primer archivo existente
-function resolvePage(filename) {
-  for (const dir of CANDIDATE_STATIC_DIRS) {
-    const p = path.join(dir, filename);
-    if (fs.existsSync(p)) return p;
-  }
-  return null;
-}
-
-// Home
-app.get('/', (req, res) => {
-  const file = resolvePage('index.html');
-  if (!file) return res.status(404).send('index.html no encontrado (colócalo en /, /public o /static)');
-  res.sendFile(file);
+// Ruta para crear un token rápido (útil para pruebas)
+// GET /create-token  -> devuelve URL /access/<token>
+app.get('/create-token', (req, res) => {
+  const token = signToken({ created_at: Date.now() });
+  const url   = `${req.protocol}://${req.get('host')}/access/${token}`;
+  res.type('text').send(url);
 });
 
-// Admin
-app.get('/admin', (req, res) => {
-  const file = resolvePage('admin.html');
-  if (!file) return res.status(404).send('admin.html no encontrado (colócalo en /, /public o /static)');
-  res.sendFile(file);
+// ==== Cloudinary ====
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// ===================== API =====================
-// Subida a Cloudinary (imagen o video) usando stream
+// carpeta opcional (si no existe, Cloudinary la crea automáticamente)
+const CLOUD_FOLDER = process.env.CLOUDINARY_FOLDER || 'recuerdos';
+
+// ==== Multer en memoria ====
+const upload = multer({ storage: multer.memoryStorage() });
+
+// ==== Subida admin -> Cloudinary ====
 app.post('/admin/upload', adminAuth, upload.single('media'), (req, res) => {
   if (!req.file) return res.status(400).send('file required');
 
   const mime = req.file.mimetype || '';
   const type = mime.startsWith('video') ? 'video' : 'image';
 
-  const title = (req.body.title || '').trim();
+  const title       = (req.body.title || '').trim();
   const description = (req.body.description || '').trim();
-  const event_date = (req.body.event_date || '').trim();
+  const event_date  = (req.body.event_date || '').trim();
 
-  // Carpeta opcional
-  const folder = process.env.CLOUDINARY_FOLDER || 'recuerdos';
-
-  const opts = {
-    folder,
-    resource_type: 'auto' // auto detecta imagen/video
-  };
+  const opts = { folder: CLOUD_FOLDER, resource_type: 'auto' };
 
   const stream = cloudinary.uploader.upload_stream(opts, (err, result) => {
     if (err) {
@@ -144,13 +119,12 @@ app.post('/admin/upload', adminAuth, upload.single('media'), (req, res) => {
       return res.status(500).json({ error: 'upload failed' });
     }
 
-    // Guarda registro en DB
     const insert = db.prepare(`
       INSERT INTO media (filename, original_name, type, title, description, event_date, cloud_url, cloud_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
     insert.run(
-      '',                        // filename vacío (ya no usamos disco local)
+      '',                              // ya no guardamos local
       req.file.originalname || '',
       type,
       title,
@@ -160,38 +134,49 @@ app.post('/admin/upload', adminAuth, upload.single('media'), (req, res) => {
       result.public_id
     );
 
-    console.log('📤 Subido a Cloudinary:', { type, url: result.secure_url, id: result.public_id });
+    console.log('📤 Subido a Cloudinary:', { title, event_date, type });
     res.json({ ok: true, url: result.secure_url });
   });
 
-  // envía el buffer al stream
   stream.end(req.file.buffer);
 });
 
-// Lista de media (prioriza cloud_url)
+// ==== API pública de media (requiere token) ====
 app.get('/api/media', (req, res) => {
-  const token = req.query.token || req.headers['x-access-token'];
+  const token   = req.query.token || req.headers['x-access-token'];
   const payload = verifyToken(token);
   if (!payload) return res.status(403).json({ error: 'token inválido' });
 
-  const stmt = db.prepare(`
+  const rows = db.prepare(`
     SELECT id, filename, original_name, type, uploaded_at, title, description, event_date, cloud_url
     FROM media
     ORDER BY uploaded_at DESC
-  `);
-  const rows = stmt.all().map(r => {
-    const url = (r.cloud_url && r.cloud_url.startsWith('http'))
+  `).all().map(r => {
+    const url = r.cloud_url && r.cloud_url.startsWith('http')
       ? r.cloud_url
       : (r.filename ? `/uploads/${r.filename}` : '');
     return { ...r, url };
   });
+
   res.json(rows);
 });
 
-// (opcional) healthcheck
-app.get('/api/ping', (_req, res) => res.json({ pong: true }));
+// ==== Rutas que sirven index.html y soportan /access/<token> ====
+// / -> index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
-// ===================== Arranque =====================
+// /access/:token -> sirve index.html (el front lee el token del segmento de la URL)
+app.get('/access/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// fallback útil para SPA si quieres que todo lo no reconocido
+// caiga en index.html (opcional):
+// app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+// ==== Start ====
 app.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
