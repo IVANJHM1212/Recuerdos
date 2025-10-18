@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Mis recuerdos</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: radial-gradient(circle, rgba(253, 224, 236, 0.85) 0%, rgb(255, 255, 230) 100%);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08)
+        }
+
+        img,
+        video {
+            width: 100%;
+            border-radius: 6px
+        }
+
+        /* ===== NAVBAR CUSTOM ===== */
+        .navbar-custom {
+            width: 70%;
+            margin: 20px auto;
+            /* centrado horizontal */
+            background: linear-gradient(90deg, #fffaf3, #fff7ef);
+            padding: 15px 20px;
+            text-align: center;
+            border-radius: 16px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+
+        .nav-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff7b00, #ff4b4b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-texts h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #262424;
+            margin: 0;
+        }
+
+        .nav-texts p {
+            font-size: 0.85rem;
+            color: #888;
+            margin: 0;
+        }
+
+        .admin-btn {
+            background: #fff;
+            border-radius: 12px;
+            padding: 8px 16px;
+            color: #1e1e1e;
+            font-weight: 500;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .admin-btn:hover {
+            background: #f5f5f5;
+        }
+
+        /* ===== HERO ===== */
+        .hero {
+            position: relative;
+            max-width: 1000px;
+            margin: 30px auto 20px auto;
+            padding: 40px 16px 20px;
+            text-align: center;
+        }
+
+        /* glow suave detrás del hero */
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: -80px 0 auto 0;
+            margin: auto;
+            width: min(900px, 90vw);
+            height: 520px;
+            background: radial-gradient(closest-side, rgba(255, 170, 190, .45), rgba(255, 210, 160, .35), rgba(255, 245, 230, 0));
+            filter: blur(2px);
+            z-index: -1;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            color: #333;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 999px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
+        }
+
+        .hero h1 {
+            margin: 22px 0 14px;
+            font-size: clamp(36px, 6.8vw, 64px);
+            line-height: 1.05;
+            font-weight: 800;
+            color: #222;
+        }
+
+        .hero .grad {
+            background: linear-gradient(90deg, #ff8a00, #ff3d57);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero p.lead {
+            margin: 0 auto;
+            max-width: 800px;
+            color: #6f6f6f;
+            font-size: clamp(16px, 2.2vw, 22px);
+            line-height: 1.6;
+        }
+
+        .hero .cta-row {
+            margin-top: 22px;
+            display: flex;
+            gap: 18px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            padding: 12px 18px;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
+            color: #2b2b2b;
+            font-weight: 700;
+            border: 1px solid rgba(0, 0, 0, .05);
+            transition: transform .15s ease, background .15s ease;
+        }
+
+        .cta:hover {
+            transform: translateY(-2px);
+        }
+
+        /* iconos de los botones */
+        .icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+        }
+
+        .icon.photo {
+            color: #ff9100;
+        }
+
+        .icon.video {
+            color: #ff3d57;
+        }
+
+        /* Encabezado de la galería */
+        .section-title {
+            text-align: center;
+            color: #3a3a3a;
+            margin: 18px 0 8px;
+        }
+
+        /* ===== GALERÍA ===== */
+        .gallery-section {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 28px;
+        }
+
+        .card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+        }
+
+        .card img,
+        .card video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 16px;
+            display: block;
+        }
+
+        .media-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            padding: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .media-icon img {
+            width: 20px;
+            height: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                gap: 20px;
+            }
+        }
+
+        /* ===== LIGHTBOX ===== */
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .lightbox.open {
+            display: flex;
+        }
+
+        .lb-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, .55);
+            backdrop-filter: blur(2px);
+        }
+
+        .lb-dialog {
+            position: relative;
+            width: min(820px, 92vw);
+            max-height: 90vh;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+        }
+
+        .lb-media {
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-height: 68vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        .lb-media img,
+        .lb-media video {
+            max-width: 100%;
+            max-height: 68vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        .lb-meta {
+            background: rgba(255, 255, 255, .92);
+            padding: 16px 20px;
+            color: #333;
+        }
+
+        .lb-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0 0 4px;
+        }
+
+        .lb-sub {
+            color: #777;
+            font-size: .95rem;
+            margin: 0 0 8px;
+        }
+
+        .lb-desc {
+            color: #555;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .lb-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .9);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+            z-index: 2;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        .card {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="navbar-custom">
+        <div class="nav-inner">
+            <div class="nav-left">
+                <div class="logo-circle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 
+                   2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 
+                   2.09C13.09 3.81 14.76 3 16.5 3 
+                   19.58 3 22 5.42 22 8.5c0 3.78-3.4 
+                   6.86-8.55 11.54L12 21.35z" />
+                    </svg>
+                </div>
+                <div class="nav-texts">
+                    <h1>Recuerdos Familiares</h1>
+                    <p>Momentos que perduran</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <section class="hero">
+        <div class="badge">
+            <!-- icono calendario -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M7 2a1 1 0 0 0-1 1v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-1V3a1 1 0 1 0-2 0v1H8V3a1 1 0 0 0-1-1ZM5 8h14v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8Z" />
+            </svg>
+            Nuestra Historia Familiar
+        </div>
+
+        <h1>
+            Cada momento cuenta<br />
+            una <span class="grad">historia única</span>
+        </h1>
+
+        <p class="lead">
+            Preserva los recuerdos más preciados de tu familia en un solo lugar.<br />
+            Revive cada sonrisa, cada celebración, cada momento especial.
+        </p>
+    </section>
+    <section class="gallery-section">
+        <div id="gallery" class="grid"></div>
+    </section>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox" aria-hidden="true">
+        <div class="lb-backdrop"></div>
+        <div class="lb-dialog" role="dialog" aria-modal="true" aria-labelledby="lb-title">
+            <button class="lb-close" id="lbClose" aria-label="Cerrar">✕</button>
+            <div class="lb-media" id="lbMedia"></div>
+            <div class="lb-meta">
+                <h3 class="lb-title" id="lb-title"></h3>
+                <p class="lb-sub" id="lb-date"></p>
+                <p class="lb-desc" id="lb-desc"></p>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const token = new URLSearchParams(location.search).get('token') || location.pathname.split('/').pop();
+
+        // Si no hay token en la URL, mostrar mensaje y ocultar todo el contenido
+        if (!token || token.length < 10) {
+            document.body.innerHTML = `
+    <div style="
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      height:100vh;
+      text-align:center;
+      flex-direction:column;
+      font-family:Arial;
+      background:radial-gradient(circle, rgba(253,224,236,0.85) 0%, rgb(255,255,230) 100%);
+    ">
+      <h2 style="font-size:2rem; color:#3a3a3a;">🔒 Para ver los recuerdos debes escanear el código</h2>
+      <p style="color:#6b6b6b;">Escanea o accede mediante un enlace autorizado.</p>
+    </div>
+  `;
+            throw new Error("Acceso restringido: falta token");
+        }
+
+
+        // Render de la grilla con data-attrs para el lightbox
+        fetch('/api/media?token=' + encodeURIComponent(token))
+            .then(r => r.json())
+            .then(list => {
+                const g = document.getElementById('gallery');
+                if (!list.length) { g.innerHTML = '<p>No hay recuerdos aún.</p>'; return; }
+
+                g.innerHTML = list.map(item => {
+                    const isVideo = item.type === 'video';
+                    const icon = isVideo
+                        ? '<div class="media-icon"><img src="https://cdn-icons-png.flaticon.com/512/711/711245.png" alt="video"></div>'
+                        : '<div class="media-icon"><img src="https://cdn-icons-png.flaticon.com/512/685/685655.png" alt="foto"></div>';
+
+                    // data-* para pasar info al lightbox
+                    const data = `
+          data-type="${isVideo ? 'video' : 'image'}"
+          data-url="${item.url}"
+          data-name="${escapeHtml(item.title || item.original_name || (isVideo ? 'Video' : 'Imagen'))}"
+          data-date="${item.event_date || item.uploaded_at || ''}"
+          data-desc="${escapeHtml(item.description || '')}"
+        `;
+
+                    return `
+          <div class="card" ${data}>
+            ${icon}
+            ${isVideo
+                            ? `<video muted playsinline src="${item.url}"></video>`
+                            : `<img src="${item.url}" alt="${escapeHtml(item.original_name || 'imagen')}">`
+                        }
+          </div>
+        `;
+                }).join('');
+            })
+            .catch(() => document.body.innerHTML = '<p>Acceso no autorizado</p>');
+
+        // --- Lightbox ---
+        const lb = document.getElementById('lightbox');
+        const lbMedia = document.getElementById('lbMedia');
+        const lbTitle = document.getElementById('lb-title');
+        const lbDate = document.getElementById('lb-date');
+        const lbDesc = document.getElementById('lb-desc');
+
+        // Abrir / cerrar
+        document.addEventListener('click', (e) => {
+            // abrir si clic en .card dentro del #gallery
+            const card = e.target.closest('.card');
+            if (card && card.parentElement && card.parentElement.id === 'gallery') {
+                const type = card.dataset.type;
+                const url = card.dataset.url;
+                const name = card.dataset.name || (type === 'video' ? 'Video' : 'Imagen');
+                const date = formatDate(card.dataset.date);
+                const desc = card.dataset.desc || '';
+
+                openLightbox({ type, url, name, date, desc });
+                return;
+            }
+
+            // cerrar si clic en fondo o botón
+            if (e.target.id === 'lbClose' || e.target.classList.contains('lb-backdrop')) {
+                closeLightbox();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && lb.classList.contains('open')) closeLightbox();
+        });
+
+        function openLightbox({ type, url, name, date, desc }) {
+            document.body.classList.add('modal-open');
+            lbMedia.innerHTML = (type === 'video')
+                ? `<video controls autoplay playsinline src="${url}"></video>`
+                : `<img src="${url}" alt="${escapeHtml(name)}">`;
+            lbTitle.textContent = name;
+            lbDate.textContent = date || '';
+            lbDesc.textContent = desc || '';
+            lb.classList.add('open');
+            lb.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeLightbox() {
+            lb.classList.remove('open');
+            lb.setAttribute('aria-hidden', 'true');
+            lbMedia.innerHTML = '';
+            document.body.classList.remove('modal-open');
+        }
+
+        // Utils
+        function formatDate(dt) {
+            try { return new Date(dt).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }); }
+            catch { return ''; }
+        }
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+        }
+    </script>
+
+
+
+
+</body>
+
+</html>

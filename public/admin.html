@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Panel admin</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: radial-gradient(circle, rgba(253, 224, 236, 0.85) 0%, rgb(255, 255, 230) 100%);
+        }
+
+        .box {
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            max-width: 400px;
+            margin: auto
+        }
+
+        /* ===== ADMIN NAV ===== */
+        .adminbar {
+            position: sticky;
+            top: 0;
+            z-index: 60;
+            background: linear-gradient(90deg, #fffaf3, #fff7ef);
+            border-bottom: 1px solid #eee;
+            padding: 10px 14px;
+        }
+
+        .adminbar-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .backlink {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #6f6f6f;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 6px 8px;
+            border-radius: 10px;
+            transition: background .15s ease, color .15s ease;
+        }
+
+        .backlink:hover {
+            background: rgba(0, 0, 0, .04);
+            color: #4b4b4b;
+        }
+
+        .admin-title {
+            color: #232323;
+            font-weight: 700;
+            letter-spacing: .2px;
+        }
+
+        /* ===== HERO PANEL ADMIN ===== */
+        .hero-admin {
+            text-align: center;
+            padding: 70px 20px 50px;
+        }
+
+        .hero-admin h1 {
+            font-size: clamp(32px, 5vw, 44px);
+            font-weight: 800;
+            color: #2b2b2b;
+            margin-bottom: 10px;
+        }
+
+        .hero-admin p {
+            font-size: 1.1rem;
+            color: #6b6b6b;
+            margin: 0;
+        }
+
+        /* ===== Upload Card ===== */
+        .upload-wrap {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 0 16px 60px;
+        }
+
+        .upload-card {
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, .06);
+            padding: 26px 48px;
+        }
+
+        .fld-label {
+            display: block;
+            font-weight: 700;
+            color: #3a3a3a;
+            margin: 14px 6px 8px;
+        }
+
+        .file-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fff;
+            border: 1px solid #f0e7dc;
+            border-radius: 16px;
+            padding: 8px 10px;
+            min-height: 46px;
+        }
+
+        .file-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #972a2a;
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .file-btn:hover {
+            filter: brightness(1.05);
+        }
+
+        .file-name {
+            color: #6b6b6b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .fld {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid #f0e7dc;
+            background: #fffdf8;
+            font: inherit;
+            color: #333;
+            outline: none;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6);
+        }
+
+        .fld:focus {
+            border-color: #ffd9b6;
+            background: #fff;
+        }
+
+        .fld.area {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            margin-top: 18px;
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: #972a2a;
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            padding: 14px 18px;
+            font-weight: 800;
+            letter-spacing: .2px;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(151, 42, 42, .25);
+        }
+
+        .submit-btn:hover {
+            filter: brightness(1.05);
+        }
+
+        .status {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: #f2fff2;
+            color: #135a13;
+            font-weight: 600;
+        }
+
+        .status.err {
+            background: #fff2f2;
+            color: #8a1414;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="adminbar">
+        <div class="adminbar-inner">
+            <a href="#" id="goBack" class="backlink">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path
+                        d="M15.5 19a1 1 0 0 1-.7-.3l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 1.4L10.9 12l5.3 5.3A1 1 0 0 1 15.5 19z" />
+                </svg>
+                Volver a Galería
+            </a>
+            <div class="admin-title">Panel de Administración</div>
+        </div>
+    </header>
+    <section class="hero-admin">
+        <h1>Subir Nuevo Recuerdo</h1>
+        <p>Comparte momentos especiales con la familia</p>
+    </section>
+
+    <section class="upload-wrap">
+        <form id="uploadForm" class="upload-card">
+            <!-- Archivo -->
+            <label class="fld-label">Archivo</label>
+            <div class="file-row">
+                <button class="file-btn" type="button" id="pickFile">
+                    <!-- ícono subir -->
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42L11 12.6V4a1 1 0 0 1 1-1zM5 20a2 2 0 0 1-2-2v-3a1 1 0 1 1 2 0v3h14v-3a1 1 0 1 1 2 0v3a2 2 0 0 1-2 2H5z" />
+                    </svg>
+                    Seleccionar archivo
+                </button>
+                <span id="fileName" class="file-name">Sin archivos seleccionados</span>
+                <input id="fileInput" type="file" accept="image/*,video/*" hidden>
+            </div>
+
+            <!-- Título -->
+            <label class="fld-label" for="title">Título del Recuerdo</label>
+            <input class="fld" id="title" name="title" type="text" placeholder="Ej: Cumpleaños de Mamá">
+
+            <!-- Fecha -->
+            <label class="fld-label" for="event_date">Fecha</label>
+            <input class="fld" id="event_date" name="event_date" type="date" placeholder="dd/mm/aaaa">
+
+            <!-- Descripción -->
+            <label class="fld-label" for="description">Descripción (Opcional)</label>
+            <textarea class="fld area" id="description" name="description"
+                placeholder="Cuéntanos sobre este momento especial..."></textarea>
+
+            <!-- Botón enviar -->
+            <button class="submit-btn" type="submit" id="submitBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M3.4 20.6 21 13 3.4 5.4 4.8 11H14v2H4.8l-1.4 5.6z" />
+                </svg>
+                Subir Recuerdo
+            </button>
+
+            <!-- estado -->
+            <div id="uploadStatus" class="status" style="display:none"></div>
+        </form>
+    </section>
+
+    <script>
+
+        // Volver a Galería (si hay referrer, usa history; si no, va a la portada)
+        document.getElementById('goBack').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (document.referrer) {
+                history.back();
+            } else {
+                window.location.href = '/';
+            }
+        });
+    </script>
+    <script>
+        // elementos
+        const fileBtn = document.getElementById('pickFile');
+        const fileInp = document.getElementById('fileInput');
+        const fileNameEl = document.getElementById('fileName');
+        const form = document.getElementById('uploadForm');
+        const statusBox = document.getElementById('uploadStatus');
+
+        fileBtn.addEventListener('click', () => fileInp.click());
+        fileInp.addEventListener('change', () => {
+            const f = fileInp.files[0];
+            fileNameEl.textContent = f ? f.name : 'Sin archivos seleccionados';
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f = fileInp.files[0];
+            if (!f) { return showStatus('Selecciona un archivo.', true); }
+
+            // credenciales admin
+            const user = prompt('Usuario admin:');
+            const pass = prompt('Contraseña admin:');
+            if (!user || !pass) { return showStatus('Credenciales requeridas.', true); }
+
+            // fecha: si viene desde <input type="date"> ya es yyyy-mm-dd;
+            // si algún navegador entrega dd/mm/aaaa, convertimos.
+            const d = (document.getElementById('event_date').value || '').trim();
+            const isoDate = toISODate(d);
+
+            const fd = new FormData();
+            fd.append('media', f);
+            fd.append('title', document.getElementById('title').value.trim());
+            fd.append('event_date', isoDate);
+            fd.append('description', document.getElementById('description').value.trim());
+
+            showStatus('Subiendo…');
+            try {
+                const resp = await fetch('/admin/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Basic ' + btoa(user + ':' + pass) },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const t = await resp.text();
+                    return showStatus('Error: ' + t, true);
+                }
+                const data = await resp.json();
+                showStatus('✅ Subido correctamente' + (data.url ? ` (${data.url})` : ''), false);
+                form.reset(); fileInp.value = ''; fileNameEl.textContent = 'Sin archivos seleccionados';
+            } catch (err) {
+                showStatus('Error de red: ' + err.message, true);
+            }
+        });
+
+        function showStatus(msg, isErr = false) {
+            statusBox.textContent = msg;
+            statusBox.classList.toggle('err', !!isErr);
+            statusBox.style.display = 'block';
+        }
+
+        // dd/mm/aaaa -> yyyy-mm-dd, o retorna tal cual si ya viene en ISO
+        function toISODate(s) {
+            if (!s) return '';
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // ya es ISO
+            const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (m) { return `${m[3]}-${m[2]}-${m[1]}`; }
+            return s; // fallback
+        }
+    </script>
+
+</body>
+
+</html>

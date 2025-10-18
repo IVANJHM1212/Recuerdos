@@ -1,0 +1,17 @@
+Generar token (para QR o NFC)
+
+En tu navegador, entra a:
+
+http://localhost:3000/create-token
+
+
+Verás algo como:
+
+{
+  "token":"eyJmb3IiOiJ...",
+  "url":"http://localhost:3000/access/eyJmb3IiOiJ..."
+}
+
+
+Copia la URL y pégala en el navegador para entrar a la galería.
+Esa URL será la que colocarás en tu código QR o etiqueta NFC ✅
