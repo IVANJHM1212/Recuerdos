@@ -1,119 +1,116 @@
+// server.js
 require('dotenv').config();
-const express = require('express');
+
 const path = require('path');
 const fs = require('fs');
+const express = require('express');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
+const Database = require('better-sqlite3');
 
-// --- App / Puerto
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// --- Cloudinary
+// ---------- Cloudinary ----------
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key:    process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// --- Estaticos
-const publicDir = path.join(__dirname, 'public');
-app.use(express.static(publicDir, { extensions: ['html'] }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ---------- Paths / estáticos ----------
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const DATA_DIR = path.join(__dirname, 'data');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+fs.mkdirSync(DATA_DIR, { recursive: true });
+
+app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
+app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- DB (sqlite experimental de Node 20+)
-const sqlite = require('node:sqlite'); // viene con Node 20+ (experimental)
-const dbFile = path.join(__dirname, 'data', 'db.sqlite');
-fs.mkdirSync(path.dirname(dbFile), { recursive: true });
+// ---------- DB (better-sqlite3, síncrono y estable) ----------
+const dbPath = path.join(DATA_DIR, 'db.sqlite');
+const db = new Database(dbPath);
+db.pragma('journal_mode = WAL');
+db.exec(`
+  CREATE TABLE IF NOT EXISTS media (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    description TEXT,
+    event_date TEXT,
+    type TEXT,
+    url TEXT,
+    uploaded_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+console.log(`✅ DB en ${dbPath}`);
 
-let db;
-(async () => {
-  db = await sqlite.open(dbFile);
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS media (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT,
-      description TEXT,
-      event_date TEXT,
-      type TEXT,
-      url TEXT,
-      uploaded_at TEXT DEFAULT (datetime('now'))
-    );
-  `);
-  console.log(`✅ DB en ${dbFile}`);
-})();
+// ---------- JWT ----------
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
-// --- Multer (disco)  NOTE: el input del form se llama 'media'
+const signToken = (payload = {}) =>
+  jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
+const verifyToken = (t) => {
+  try { return jwt.verify(t, JWT_SECRET); } catch { return null; }
+};
+
+// ---------- Multer (campo 'media' desde admin.html) ----------
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, 'uploads');
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + (file.originalname || 'file'));
-  }
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => cb(null, Date.now() + '-' + (file.originalname || 'file'))
 });
 const upload = multer({ storage });
 
-// --- JWT util
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
+// ---------- Rutas HTML ----------
+app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
+app.get('/admin.html', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.get('/access/:token', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 
-function signToken(payload = {}) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
-}
-function verifyToken(t) {
-  try { return jwt.verify(t, JWT_SECRET); } catch { return null; }
-}
-
-// --- Rutas HTML
-app.get('/', (_req, res) => res.sendFile(path.join(publicDir, 'index.html')));
-app.get('/admin.html', (_req, res) => res.sendFile(path.join(publicDir, 'admin.html')));
-app.get('/access/:token', (_req, res) => res.sendFile(path.join(publicDir, 'index.html')));
-
-// Genera un enlace con token
+// Genera URL con token
 app.get('/create-token', (req, res) => {
-  const token = signToken({ from: 'admin' });
+  const token = signToken({ role: 'viewer' });
   const url = `${req.protocol}://${req.get('host')}/access/${token}`;
   res.type('text').send(url);
 });
 
-// --- API: lista de medios
-app.get('/api/media', async (req, res) => {
+// ---------- API: listar media (requiere token) ----------
+app.get('/api/media', (req, res) => {
   const token = req.query.token;
   if (!verifyToken(token)) return res.status(401).json({ error: 'Token inválido o faltante' });
 
-  const rows = await db.all(`
+  const rows = db.prepare(`
     SELECT id, title, description, event_date, type, url, uploaded_at
     FROM media
     ORDER BY uploaded_at DESC
-  `);
+  `).all();
+
   res.json(rows);
 });
 
-// --- ADMIN: subida (campo 'media' desde admin.html)
+// ---------- ADMIN: subir a Cloudinary (acepta imagen/video) ----------
 app.post('/admin/upload', upload.single('media'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Archivo requerido' });
 
-    const { title = '', description = '', event_date = '' } = req.body;
+    const title = (req.body.title || '').trim();
+    const description = (req.body.description || '').trim();
+    const event_date = (req.body.event_date || '').trim();
 
-    // Sube a Cloudinary (auto: imagen o video)
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: process.env.CLOUDINARY_FOLDER || 'recuerdos',
-      resource_type: 'auto'
+      resource_type: 'auto' // detecta image|video
     });
 
     const type = (result.resource_type === 'video') ? 'video' : 'image';
 
-    await db.run(
-      `INSERT INTO media (title, description, event_date, type, url)
-       VALUES (?, ?, ?, ?, ?)`,
-      [title.trim(), description.trim(), event_date.trim(), type, result.secure_url]
-    );
+    db.prepare(`
+      INSERT INTO media (title, description, event_date, type, url)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(title, description, event_date, type, result.secure_url);
 
     console.log('📤 Subido:', { title, event_date, type });
     res.redirect('/admin.html');
@@ -123,7 +120,7 @@ app.post('/admin/upload', upload.single('media'), async (req, res) => {
   }
 });
 
-// --- Inicio
+// ---------- Start ----------
 app.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
