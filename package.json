@@ -1,19 +1,15 @@
 {
-  "name": "recuerdos-familiares",
+  "name": "recuerdos",
   "version": "1.0.0",
-  "main": "server.js",
-  "type": "commonjs",
+  "private": true,
+  "engines": { "node": ">=20 <26" },
   "scripts": {
     "start": "node server.js"
   },
-  "engines": {
-    "node": ">=22.16.0"
-  },
   "dependencies": {
-    "better-sqlite3": "^9.6.0",
+    "cloudinary": "^1.41.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "multer": "^1.4.5-lts.2",
-    "cloudinary": "^2.7.0"
+    "multer": "^1.4.5-lts.1"
   }
 }
