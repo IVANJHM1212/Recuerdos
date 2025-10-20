@@ -4,7 +4,6 @@ require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
-const basicAuth = require('basic-auth');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
@@ -58,16 +57,29 @@ const upload = multer({
 
 // ====== Helpers ======
 function adminAuth(req, res, next) {
-  const user = basicAuth(req);
-  const ok = user
-    && user.name === (process.env.ADMIN_USER || 'admin')
-    && user.pass === (process.env.ADMIN_PASS || 'admin');
-  if (!ok) {
-    res.set('WWW-Authenticate', 'Basic realm="Admin Area"');
-    return res.status(401).send('Auth required');
+  try {
+    const header = req.get('authorization') || '';
+    // Debe ser "Basic base64(user:pass)"
+    if (!header.toLowerCase().startsWith('basic ')) {
+      res.set('WWW-Authenticate', 'Basic realm="admin"');
+      return res.status(401).send('Auth required');
+    }
+
+    const b64 = header.split(' ')[1] || '';
+    const [user, pass] = Buffer.from(b64, 'base64').toString('utf8').split(':');
+
+    const AU = process.env.ADMIN_USER || 'admin';
+    const AP = process.env.ADMIN_PASS || 'admin';
+
+    if (user !== AU || pass !== AP) {
+      return res.status(401).send('Invalid credentials');
+    }
+    next();
+  } catch (e) {
+    return res.status(401).send('Invalid Authorization header');
   }
-  next();
 }
+
 
 function createToken(payload, expires = '90d') {
   return jwt.sign(payload, SECRET, { expiresIn: expires });
