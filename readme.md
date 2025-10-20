@@ -158,5 +158,3 @@ Iván Hernández Morales
 📍 Chile
 💬 "Preserva los recuerdos más valiosos de tu familia con tecnología."
 
-yaml
-Copiar código

@@ -296,13 +296,10 @@
             const f = fileInp.files[0];
             if (!f) { return showStatus('Selecciona un archivo.', true); }
 
-            // credenciales admin
             const user = prompt('Usuario admin:');
             const pass = prompt('Contraseña admin:');
             if (!user || !pass) { return showStatus('Credenciales requeridas.', true); }
 
-            // fecha: si viene desde <input type="date"> ya es yyyy-mm-dd;
-            // si algún navegador entrega dd/mm/aaaa, convertimos.
             const d = (document.getElementById('event_date').value || '').trim();
             const isoDate = toISODate(d);
 
@@ -319,11 +316,25 @@
                     headers: { 'Authorization': 'Basic ' + btoa(user + ':' + pass) },
                     body: fd
                 });
-                if (!resp.ok) {
-                    const t = await resp.text();
-                    return showStatus('Error: ' + t, true);
+
+                // Lee content-type y prepara fallback a texto si no es JSON
+                const ct = resp.headers.get('content-type') || '';
+                const bodyText = await resp.clone().text();
+                let data = null;
+                if (ct.includes('application/json')) {
+                    try { data = JSON.parse(bodyText); } catch { /* seguirá en null */ }
                 }
-                const data = await resp.json();
+
+                if (!resp.ok) {
+                    // Muestra lo que realmente devolvió el servidor/proxy
+                    return showStatus(`Error ${resp.status}: ${bodyText.slice(0, 200)}`, true);
+                }
+
+                if (!data) {
+                    // Respuesta 200 pero no JSON → muestra primer trozo para diagnosticar
+                    return showStatus(`Respuesta no-JSON (ct=${ct}): ${bodyText.slice(0, 200)}`, true);
+                }
+
                 showStatus('✅ Subido correctamente' + (data.url ? ` (${data.url})` : ''), false);
                 form.reset(); fileInp.value = ''; fileNameEl.textContent = 'Sin archivos seleccionados';
             } catch (err) {
